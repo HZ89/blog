@@ -1,9 +1,9 @@
 ---
 layout: post
-title: Cloud Native MySQL
+title: 云原生MySQL初探之一
 ---
 
-# 云原生MySQL初探
+# 云原生MySQL初探之一
 
 云原生概念近些年越来越火热与普及，但是在MySQL领域似乎一直没有太大的动静。貌似DBA们都岁月静好的坚守传统的方式。我认为主要原因两点：
 
