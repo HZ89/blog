@@ -60,13 +60,13 @@ showLastUpdated = false
 [languages]
 [languages.en]
 languageName = "English"
-title = "Terminal"
+title = "Harrison's blog"
+copyright = '<p>© 2025 Harrison Zhu. All rights reserved.</p><p>Content licensed under <a href="https://creativecommons.org/licenses/by-nd/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NoDerivatives 4.0 International License</a>.</p>'
 
 [languages.en.params]
-subtitle = "A simple, retro theme for Hugo"
-owner = ""
-keywords = ""
-copyright = ""
+subtitle = "a tech blog"
+owner = "Harrison Zhu"
+keywords = "kubernetes k8s container rust go AI huggingface"
 menuMore = "Show more"
 readMore = "Read more"
 readOtherPosts = "Read other posts"

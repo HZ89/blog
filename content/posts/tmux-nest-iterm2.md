@@ -1,16 +1,17 @@
 +++
-title = "Turbocharge Your Terminal: A Fun Trick for a Stress-Free tmux + iTerm2 Setup"
+title = "Avoid tmux Nesting with a Simple iTerm2 Trick"
 date = "2025-01-02T23:01:52+08:00"
 #dateFormat = "2006-01-02" # This value can be configured for per-post date formatting
 author = "Harrison Zhu"
 authorTwitter = "" #do not include @
 cover = ""
 tags = ["iterm2", "tmux"]
-keywords = ["", ""]
-description = ""
+keywords = ["tmux", "iTerm2", "nested", "automation"]
+description = "A guide to avoiding nested tmux sessions by using iTerm2 profiles and simple automations for seamless local and remote workflows."
 showFullContent = false
-readingTime = "600s"
+readingTime = 600
 hideComments = false
+license= "CC BY-ND 4.0"
 +++
 
 ## 1. The Confusion: Using Tmux Locally **and** Remotely
@@ -30,20 +31,14 @@ This can turn the magic of tmux into a headache. Thankfully, there’s a simple 
 
 ---
 
-## 2. Why We Do This
+## 2. What You’ll Achieve
 
-- **Local tmux**:  
-  - Keep your **local** scripts, builds, logs, or Docker containers running—even if you close iTerm2 or unplug from the network.  
-  - Seamlessly **detach and reattach** to your local environment on your Mac.
+By following this guide, you’ll configure your iTerm2 and tmux setup to work seamlessly together, achieving the following:
+* Local Automation: When you open a new tab in iTerm2, it will automatically attach to your local tmux session—no extra commands needed.
+* Remote Smoothness: When you try to SSH to a remote server from this session, a new tab will automatically open, connect to the remote server, and prevent any local tmux nesting.
+* Effortless Cleanup: Once you log out of the SSH session, the tab will automatically close, keeping your terminal clean and clutter-free.
 
-- **Remote tmux**:  
-  - Keep **remote** tasks alive if the connection drops or if you need to log out.  
-  - Easily handle long-running builds, watchers, or logs on your servers without worrying about your laptop’s uptime.
-
-But if you open a local tmux session and then nest a remote tmux session, it leads to the confusion above. The fix: **iTerm2 profiles** so you can choose whether you want local tmux or not, **and** let the remote server handle its own tmux. This way, you have:
-
-- A local tmux for everything happening on your machine.
-- A **plain shell** for quick SSH connections—**no** local tmux—so if the remote server is running tmux, you get just one layer.
+This setup creates a natural, intuitive workflow for managing both local and remote tasks, avoiding the frustrations of nested tmux sessions and ensuring a smooth experience throughout.
 
 ---
 
@@ -55,7 +50,7 @@ But if you open a local tmux session and then nest a remote tmux session, it lea
    ```
    /usr/local/bin/tmux new-session -A -s mylocal
    ```
-   Adjust the path as necessary (maybe `/opt/homebrew/bin/tmux`). The `-A -s mylocal` means “attach to session `mylocal` if it exists, otherwise create it.”
+   Adjust the path as necessary (eg. `/opt/homebrew/bin/tmux`). The `-A -s mylocal` means “attach to session `mylocal` if it exists, otherwise create it.”
 
 2. Now, whenever you open a new iTerm2 tab/window with this **Default** profile, you automatically attach a **local** tmux session. If it’s already running, you just reattach.
 
@@ -65,82 +60,120 @@ But if you open a local tmux session and then nest a remote tmux session, it lea
 
 1. **Create another iTerm2 profile** called “SSH-no-tmux.”  
 2. In **General** → **Command**, put:
-   ```
+
+   ``` bash
    /bin/zsh --login
    ```
+
    (Or `/bin/bash --login`, `/usr/local/bin/fish`, etc.)  
 3. If you have an auto-start line in `~/.zshrc` or `~/.bashrc` like:
+
    ```bash
    [ -z "$TMUX" ] && exec tmux
    ```
-   …wrap it in a variable check to skip tmux if `SKIP_LOCAL_TMUX=1`:
+
+   …wrap it in a condition to skip tmux if `SKIP_LOCAL_TMUX=1`:
+
    ```bash
    if [ -z "$TMUX" ] && [ -z "$SKIP_LOCAL_TMUX" ]; then
      exec tmux
    fi
    ```
+
 4. Then, in the **SSH-no-tmux** profile’s Command, do:
-   ```
+
+   ```bash
    env SKIP_LOCAL_TMUX=1 /bin/zsh --login
    ```
+
    That prevents **any** local tmux from auto-starting, so you get a raw shell—perfect for starting a **remote** tmux session without nesting.
 
 ---
 
 ## 5. Quickly Open SSH in a New iTerm2 Tab
 
-### 5.1 Use AppleScript
+### 5.1 Use AppleScript and zsh function
 
-If you want an easy way to open a new tab with the “SSH-no-tmux” profile and immediately run `ssh user@host`, create a script like `sshnt`:
+add this `ssh` function to your `~/.zshrc`, it will override the original ssh command and avoid breaking any other applications which rely on ssh like scp, rsync, ansible and some zsh plugins.
 
 ```bash
-#!/usr/bin/env bash
-if [ -z "$1" ]; then
-  echo "Usage: sshnt <host>"
-  exit 1
-fi
-HOST="$1"
-shift
+# 1) Path to the real ssh
+REAL_SSH="$(command -v ssh)"
 
-osascript <<EOF
+function ssh() {
+  # 2) Non-interactive check: don’t break scripts/tools calling ssh
+  if [[ $- != *i* ]]; then
+    "$REAL_SSH" "$@"
+    return
+  fi
+  # Check if both stdin and stdout are TTYs.
+  # This ensures overriding only in a fully interactive context.
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    "$REAL_SSH" "$@"
+    return
+  fi
+
+  # 3) Detect if parent is scp/rsync/sftp via the full command line
+  local parent_cmd
+  parent_cmd="$(ps -p "$PPID" -o command= 2>/dev/null)"
+
+  case "$parent_cmd" in
+    scp*|rsync*|sftp*)
+      # If parent is scp/rsync/sftp, just run the real ssh
+      "$REAL_SSH" "$@"
+      return
+      ;;
+  esac
+
+  # 4) (Optional) If you only want the override inside local tmux:
+  if [[ -n "$TMUX" && -z "$SSH_CONNECTION" ]]; then
+    # AppleScript block to open a new iTerm2 tab with a special profile
+    osascript <<EOF
 tell application "iTerm2"
   if windows is {} then
     set newWindow to create window with profile "SSH-no-tmux"
     tell current session of newWindow
-      write text "ssh $HOST $*"
+      write text "ssh $*"
     end tell
   else
     tell current window
       create tab with profile "SSH-no-tmux"
       tell current session of current tab
-        write text "ssh $HOST $*"
+        write text "ssh $*"
       end tell
     end tell
   end if
 end tell
 EOF
-```
 
-- Make it executable: `chmod +x ~/.local/bin/sshnt`.  
-- Now you can run: `sshnt myserver` to open a new tab in **SSH-no-tmux** profile and jump right into `ssh myserver`.  
+  else
+    # Otherwise, run the real ssh
+    "$REAL_SSH" "$@"
+  fi
+}
+```
+ 
+- Now you can run: `ssh myserver` to open a new tab in **SSH-no-tmux** profile and jump right into `ssh myserver`.  
 
 ---
 
 ## 6. Auto-Close the Tab on Logout
 
-When you `exit` a remote SSH session, you might want iTerm2 to close that tab automatically. Older iTerm2 versions had a direct “Close Tab” trigger, but newer ones require a coprocess script:
+When you `exit` a remote SSH session, you may want iTerm2 to close that tab automatically. Older iTerm2 versions had a direct “Close Tab” trigger, but newer versions require using a coprocess script:
 
 1. **Create a small script** in `~/.local/bin/close_iterm_tab.sh`:
-   ```bash
-   #!/usr/bin/env bash
-   osascript <<EOF
-tell application "iTerm2"
-  tell current window
-    close current tab
-  end tell
-end tell
-EOF
-   ```
+
+     ```bash
+    #!/usr/bin/env bash
+    osascript <<EOF
+    tell application "iTerm2"
+    tell current window
+        close current tab
+    end tell
+    end tell
+    EOF
+    ```
+
 2. Make it executable: `chmod +x ~/.local/bin/close_iterm_tab.sh`
 3. In **iTerm2 → Preferences → Profiles → SSH-no-tmux → Triggers**, create a new trigger:
    - **Regular Expression**: `^Connection to .* closed\.`  
@@ -153,13 +186,18 @@ Now, when you log out from an SSH session, iTerm2 sees `Connection to <host> clo
 
 ## 7. Remote tmux for Persistent Server Sessions
 
-On your remote server’s `~/.bashrc` or `~/.zshrc`, you might do:
-```bash
-if [ -z "$TMUX" ]; then
-  tmux new-session -A -s remote
-fi
+On your local `~/.ssh/config`, you might do:
+
+``` text
+Host foo
+    HostName foo.b1uepi.xyz
+    User ubuntu
+    RemoteCommand tmux new-session -A -s username
+    RequestTTY yes
+    IdentityFile /Users/username/foo/ppk
 ```
-That ensures once you SSH in, you’re automatically in **remote tmux**. If your connection drops, your processes keep running. Just reattach with `tmux attach -t remote`.
+
+That ensures once you SSH in, you’re automatically in **remote tmux**. If your connection drops, your processes keep running. When you reconnect to remote it will attach to the session automatically
 
 *(If you want a plain shell sometimes, either comment it out or add a condition.)*
 
@@ -171,9 +209,9 @@ By having:
 
 - **Default Profile** (auto local tmux)  
 - **SSH-no-tmux Profile** (plain shell → remote tmux)  
-- A script (`sshnt`) or AppleScript automation to open new tabs quickly  
-- (Optional) Triggers to close tabs when SSH sessions end  
+- A zsh function in zshrc automation to open new tabs quickly  
+   Triggers to close tabs when SSH sessions end  
 
-…you **avoid** nested tmux confusion. You get local persistence for local tasks, remote persistence for server tasks, and a clean, intuitive terminal experience in iTerm2—without the dreaded keybinding collisions or mouse-forwarding issues.
+…you **avoid** nested tmux confusion. You get local persistence for local tasks, remote persistence for server tasks, and enjoy a clean, intuitive terminal experience in iTerm2—free from keybinding collisions or mouse-forwarding issues.
 
 Give it a try and say goodbye to the chaos of nesting tmux!
