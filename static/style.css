@@ -29,7 +29,7 @@ body {
     "Fira Code",
     Monaco,
     Consolas,
-     "Ubuntu Mono",
+    "Ubuntu Mono",
     monospace;
   font-size: var(--font-size);
   font-weight: 400;
@@ -55,18 +55,33 @@ h1 {
   text-underline-offset: calc(var(--font-size) * 0.2);
 }
 
-h1, h2 {
+h1,
+h2 {
   text-transform: uppercase;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-size: calc(var(--font-size) * 1.1);
   letter-spacing: 0.04em;
 }
 
-h1, h2, h3, h4, h5, h6,
-p, ul, ol,
-img, figure, video,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul,
+ol,
+img,
+figure,
+video,
 table {
   margin: calc(var(--line-height) * 1.2) 0;
 }
@@ -164,11 +179,9 @@ select:active {
 }
 
 select {
-  background-image: linear-gradient(
-      45deg,
+  background-image: linear-gradient(45deg,
       transparent 50%,
-      var(--foreground) 50%
-    ),
+      var(--foreground) 50%),
     linear-gradient(135deg, var(--foreground) 50%, transparent 50%);
   background-position: calc(100% - 20px), calc(100% - 15px);
   background-size:
@@ -367,9 +380,86 @@ hr {
 }
 
 /* Bold elements */
-h1, h2, h3, h4, h5, h6,
-b, strong,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+b,
+strong,
 th,
 button {
   font-weight: 600;
+}
+
+.footer {
+  width: 100%;
+  /* Full width of the footer */
+  background-color: transparent;
+  /* No background */
+  color: var(--foreground);
+  /* Text color */
+  padding: 5px 0;
+  /* Compact padding */
+  text-align: center;
+  /* Center the text */
+  box-sizing: border-box;
+  /* Include padding in width/height calculations */
+  line-height: 1.3;
+  /* Slightly reduced line spacing */
+}
+
+.footer__inner {
+  max-width: 90%;
+  /* Responsive width, adjusts to viewport */
+  margin: 0 auto;
+  /* Center horizontally */
+  padding: 0;
+  /* No extra padding */
+  box-sizing: border-box;
+}
+
+.footer__content {
+  word-wrap: break-word;
+  /* Break long words */
+  word-break: break-word;
+  /* Break long words and URLs */
+  white-space: normal;
+  /* Allow text to wrap to new lines */
+  overflow-wrap: break-word;
+  /* Ensure proper word wrapping for long text */
+  text-align: center;
+  /* Center-align the text */
+  line-height: 1.4;
+  /* Compact but readable line height */
+}
+
+.copyright.copyright--user span {
+  display: block;
+  /* Ensure the span behaves like a block element */
+  text-align: center;
+  /* Center-align text */
+  word-wrap: break-word;
+  /* Break long words */
+  overflow-wrap: break-word;
+  /* Handle long URLs */
+  white-space: normal;
+  /* Allow wrapping to new lines */
+  font-size: 0.9rem;
+  /* Adjust font size */
+  line-height: 1.4;
+  /* Compact spacing */
+}
+
+a {
+  color: var(--accent);
+  /* Link color */
+  text-decoration: none;
+  /* No underline */
+}
+
+a:hover {
+  text-decoration: underline;
+  /* Underline on hover */
 }
