@@ -100,3 +100,6 @@ url = "/showcase"
 # replacements = "github.com/panr/hugo-theme-terminal/v4 -> themes/terminal"
 [[module.imports]]
 path = 'terminal'
+
+[outputs]
+home = ["HTML", "RSS"]
