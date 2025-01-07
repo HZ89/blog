@@ -1,5 +1,5 @@
 # Stage 1: Build the Hugo site
-FROM ghcr.io/gohugoio/hugo:latest AS builder
+FROM ghcr.io/gohugoio/hugo:v0.140.2 AS builder
 
 WORKDIR /src
 COPY --chown=hugo:hugo . .
