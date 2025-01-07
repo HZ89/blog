@@ -1,4 +1,6 @@
-baseURL = 'https://b1uepi.xyz/blog'
+baseURL = '/blog'
+#canonifyURLs = false
+#relativeURLs = true
 languageCode = 'en-us'
 title = "Harrison's blog"
 theme = "terminal"
