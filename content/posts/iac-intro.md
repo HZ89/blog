@@ -1,11 +1,11 @@
 +++
-title = "Iac Intro"
+title = "ntroducing Infrastructure as Code (IaC): Transforming Operations for Reliability and Scalability"
 date = "2025-01-27T14:52:54+08:00"
 #dateFormat = "2006-01-02" # This value can be configured for per-post date formatting
 author = "Harrison Zhu"
 authorTwitter = "" #do not include @
 cover = ""
-tags = ["IaC", ""]
+tags = ["IaC"]
 keywords = ["", ""]
 description = ""
 showFullContent = false
