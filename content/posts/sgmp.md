@@ -14,9 +14,11 @@ hideComments = false
 +++
 
 ## **1. Introduction**
+
 Secure Group Messaging Protocol (**SGMP**) is a cryptographic protocol for **end-to-end encrypted (E2EE) group communication**. Unlike traditional models, SGMP eliminates server trust by ensuring **members independently maintain group state and exchange encryption keys**, preventing unauthorized member insertion (**Ghost User Attacks**).
 
 ## **2. Key Features**
+
 ✅ **Decentralized Key Management**: Members maintain group state and exchange keys.
 ✅ **Shared Key with Periodic Rotation**: Messages are encrypted using a shared symmetric key updated regularly.
 ✅ **Server-Assisted Encrypted Key Storage**: The server only stores encrypted keys.
@@ -24,6 +26,7 @@ Secure Group Messaging Protocol (**SGMP**) is a cryptographic protocol for **end
 ✅ **No Trust in Server for Group Membership**: Members validate all member lists, preventing ghost users.
 
 ## **3. Cryptographic Primitives**
+
 | Component | Algorithm |
 |------------|----------------|
 | **Asymmetric Key Exchange** | X3DH (Signal Protocol) |
@@ -43,10 +46,13 @@ Secure Group Messaging Protocol (**SGMP**) is a cryptographic protocol for **end
 - The server **does not relay messages**.
 
 ### **4.3 Key Rotation & History Decryption**
+
 - The group periodically **updates the shared key**:
+
   ```
   Kn = HMAC(Kn-1, "next")
   ```
+
 - **Older messages remain decryptable**, ensuring historical access for new members.
 
 ### **4.4 New Member Integration**
