@@ -105,7 +105,9 @@ When a new member is added, the admin verifies their public key. The admin also 
 
 ✅ **Ensures new members can access previous conversations securely.**  
 ✅ **Prevents the server from accessing message contents.**  
-✅ **New members integrate into the group without missing prior context.### **4.3 Message Sending Process**  
+✅ **New members integrate into the group without missing prior context.**  
+
+### **4.3 Message Sending Process**  
 
 When a member sends a message to the group, it follows a secure process to ensure **end-to-end encryption (E2EE), integrity, and authenticity**.
 
