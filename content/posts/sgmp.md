@@ -61,22 +61,29 @@ This section describes how the group is created and how the initial members secu
 
 ### **4.2 New Member Integration**
 
-When a new member is added, their public key is verified, and the group key (`K0`) is securely shared. Additionally, the new member should receive some encrypted history messages stored by the server.
+When a new member is added, the admin verifies their public key. The admin also provides its own public key to the new member over a P2P channel, while the new member may independently fetch the admin’s key from an OpenPGP key server. Once keys are verified, the group key (`K0`) is shared, and the new member can access encrypted history.
 
 #### **Step 1: New Member Requests to Join**
 
 1. **New member generates a key pair** and submits `PubKey_X` to the admin.
-2. **Admin verifies and signs `PubKey_X`**:
+2. **Admin verifies and signs `PubKey_X**:
    ```
    Signed_PubKey_X = Sign(PubKey_X, PrivateKey_Admin)
    ```
-3. **The server broadcasts `PubKey_X` and `Signed_PubKey_X` to all members.**
+3. **Server broadcasts `PubKey_X` and `Signed_PubKey_X` to all members.**
 4. **Existing members verify `Signed_PubKey_X`**:
    ```
    Verify(Signed_PubKey_X, PubKey_Admin)
    ```
 
-#### **Step 2: Encrypting and Sharing the Group Key (`K0`)**
+#### **Step 2: Admin Shares Its Public Key With the New Member**
+
+1. **Admin initiates a P2P communication** to send the admin’s public key (`PubKey_Admin`) directly to the new member.
+2. **Simultaneously**, the new member **attempts to fetch `PubKey_Admin`** from an **OpenPGP key server** (or any external key directory).
+3. **If both sources match**, the new member gains high confidence in `PubKey_Admin`.
+4. **If only one source is available**, the new member trusts that source by default.
+
+#### **Step 3: Encrypting and Sharing the Group Key (`K0`)**
 
 1. **An existing member encrypts `K0` for `X`**:
    ```
@@ -87,10 +94,10 @@ When a new member is added, their public key is verified, and the group key (`K0
    K0 = Decrypt(EncK0_X, PrivateKey_X)
    ```
 
-#### **Step 3: Providing Encrypted History Messages**
+#### **Step 4: Providing Encrypted History Messages**
 
-7. **The server stores recent encrypted messages (`EncMsg`) and serves them to new members.**
-8. **New member retrieves and decrypts stored messages using `K0`**:
+1. **Server stores recent encrypted messages (`EncMsg`) and serves them to new members.**
+2. **New member retrieves and decrypts stored messages using `K0`**:
    ```
    History = [EncMsg_1, EncMsg_2, ..., EncMsg_N]
    Decrypted_History = [Decrypt(EncMsg_1, K0), ..., Decrypt(EncMsg_N, K0)]
@@ -98,34 +105,11 @@ When a new member is added, their public key is verified, and the group key (`K0
 
 ✅ **Ensures new members can access previous conversations securely.**  
 ✅ **Prevents the server from accessing message contents.**  
-✅ **New members integrate into the group without missing prior context.**
-
-When a new member is added, their public key is verified, and the group key (`K0`) is securely shared.
-
-1. **New member generates a key pair** and submits `PubKey_X` to the admin.
-2. **Admin verifies and signs `PubKey_X`**:
-   ```
-   Signed_PubKey_X = Sign(PubKey_X, PrivateKey_Admin)
-   ```
-3. **The server broadcasts `PubKey_X` and `Signed_PubKey_X` to all members.**
-4. **Existing members verify `Signed_PubKey_X`**:
-   ```
-   Verify(Signed_PubKey_X, PubKey_Admin)
-   ```
-5. **An existing member encrypts `K0` for `X`**:
-   ```
-   EncK0_X = Encrypt(K0, PubKey_X)
-   ```
-6. **New member retrieves and decrypts `K0`**:
-   ```
-   K0 = Decrypt(EncK0_X, PrivateKey_X)
-   ```
-
-### **4.3 Message Sending Process**
+✅ **New members integrate into the group without missing prior context.### **4.3 Message Sending Process**  
 
 When a member sends a message to the group, it follows a secure process to ensure **end-to-end encryption (E2EE), integrity, and authenticity**.
 
-1. **Sender composes message (`M`) and generates a message ID (`Msg_ID`).**
+1. **Sender composes message (`M`) and generates a unique 128-bit message ID (`Msg_ID`).**
 2. **Encrypt the message using `Kn` (current shared key):**
    ```
    CipherText = Encrypt(M, Kn)
@@ -135,12 +119,41 @@ When a member sends a message to the group, it follows a secure process to ensur
    Signature = Sign(CipherText || Msg_ID, PrivateKey_Sender)
    ```
 4. **Broadcast the encrypted message to all members.**
-5. **Each recipient verifies the signature and decrypts `CipherText` using `Kn`**:
+5. **Each recipient verifies the signature and checks for out-of-order or duplicate messages:**
+   - If `Msg_ID` is already processed, the message is ignored.
+   - If a message arrives out of order, it is temporarily buffered for reordering.
+6. **If valid, decrypt `CipherText` using `Kn`**:
    ```
    M = Decrypt(CipherText, Kn)
    ```
 
-### **4.4 Preventing Ghost Users**
+✅ **Ensures message authenticity and integrity.**  
+✅ **Prevents replay attacks and message duplication.**  
+✅ **Allows recipients to handle out-of-order messages efficiently.**  
+
+### **4.4 Key Rotation & Historical Decryption**
+
+To maintain ongoing security, the group key (`K0`) must be periodically updated. Each updated key (`K1`, `K2`, etc.) should still be able to decrypt older messages, ensuring new members can view history.
+
+1. **Periodic or Event-Based Key Rotation**
+   - After a set duration (e.g., daily) or a certain number of messages, the group derives a new key:
+     ```
+     Kn = HMAC(K(n−1), "rotation")
+     ```
+   - This approach ensures forward secrecy while still allowing new key holders to decrypt prior content.
+2. **Sharing the New Key**
+   - An existing member encrypts `Kn` for each current member's public key.
+   - If a new member joins after the rotation, they are given `Kn` directly.
+3. **Decrypting Historical Messages**
+   - All older messages remain decryptable by `Kn` because either:
+     - The same encryption key is reused across periods (less secure), or
+     - Each key can derive previous keys in a ratchet-like manner (more secure):
+       ```
+       K(n−1) = HMAC(Kn, "reverse")
+       ```
+   - Members who join late can request older messages from the server and decrypt them using the rotated key chain.
+
+### **4.5 Preventing Ghost Users**
 
 SGMP ensures that **only authorized members participate in the group** and prevents unauthorized additions (Ghost Users).
 
@@ -159,12 +172,14 @@ SGMP ensures that **only authorized members participate in the group** and preve
 - Before encrypting a message, members **verify `H_root` to ensure group integrity**.
 
 #### **Distributed Key Approval**
+
 - A **new member must receive `K0` from multiple existing members**, preventing a single compromised entity from approving unauthorized users.
 
 ✅ **Ghost users cannot decrypt messages because they never receive `K0`.**  
 ✅ **Server cannot manipulate membership without being detected.**  
 
-## **5. Summary of Key Functions**
+## **5. Summary of Key Functions Summary of Key Functions**
+
 | Scenario | Responsible for Encrypting `K0`? |
 |----------------|------------------------------|
 | **Group creation** | ✅ Admin encrypts `K0` for all initial members. |
